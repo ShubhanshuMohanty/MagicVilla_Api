@@ -2,6 +2,7 @@
 using MagicVilla_VillaApi.Models;
 using MagicVilla_VillaApi.Models.Dto;
 using MagicVilla_VillaApi.Repository.IRepository;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 
@@ -14,10 +15,12 @@ namespace MagicVilla_VillaApi.Controllers
         private readonly IVillaNumberRepository _dbVillaNumber;
         private readonly APIResponse _response;
         private readonly IMapper _mapper;
-        public VillaNumberAPIController(IVillaNumberRepository villaNumberRepository, IMapper mapper)
+        private readonly IVillaRepository _dbVilla;
+        public VillaNumberAPIController(IVillaNumberRepository villaNumberRepository, IMapper mapper, IVillaRepository dbVilla)
         {
             _dbVillaNumber = villaNumberRepository;
             _mapper = mapper;
+            _dbVilla = dbVilla;
             this._response = new();
         }
         [HttpGet("GetAllVillaNumbers")]
@@ -77,6 +80,11 @@ namespace MagicVilla_VillaApi.Controllers
         {
             try
             {
+                if (await _dbVilla.GetAsync(u => u.Id == createDTO.VillaID) == null)
+                {
+                    ModelState.AddModelError("CustomError", "Villa ID is Invalid!");
+                    return BadRequest(ModelState);
+                }
                 if (await _dbVillaNumber.GetAsync(u => u.VillaNo == createDTO.VillaNo) != null)
                 {
                     ModelState.AddModelError("CustomError", "Villa Number already exists!");
@@ -139,6 +147,11 @@ namespace MagicVilla_VillaApi.Controllers
                 if (updateDTO == null || id != updateDTO.VillaNo)
                 {
                     return BadRequest();
+                }
+                if (await _dbVilla.GetAsync(u => u.Id == updateDTO.VillaID) == null)
+                {
+                    ModelState.AddModelError("CustomError", "Villa ID is Invalid!");
+                    return BadRequest(ModelState);
                 }
                 VillaNumber model = _mapper.Map<VillaNumber>(updateDTO);
                 await _dbVillaNumber.UpdateAsync(model);
